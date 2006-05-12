@@ -1,0 +1,23 @@
+---
+name: Simulation-Sensitivity
+version: 0.10
+author:
+  - David A Golden <dagolden@cpan.org>
+abstract: |-
+  A general-purpose sensitivity analysis tool for 
+  user-supplied calculations and parameters
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
+requires:
+  Class::Accessor::Fast: 0
+  Params::Validate: 0
+  Test::More: 0.45
+provides:
+  Simulation::Sensitivity:
+    file: lib/Simulation/Sensitivity.pm
+    version: 0.10
+generated_by: Module::Build version 0.28
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

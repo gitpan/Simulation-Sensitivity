@@ -1,0 +1,7 @@
+Revision history for Perl module Simulation::Sensitivity
+
+0.10 Fri May 12 07:46:52 EDT 2006
+    - initial release for CPAN10K challenge
+
+0.01 Sat Dec 11 01:45:14 2004
+	- original version; created by ExtUtils::ModuleMaker::TT
