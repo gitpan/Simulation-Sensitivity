@@ -1,8 +1,8 @@
 ---
 name: Simulation-Sensitivity
-version: 0.10
+version: 0.11
 author:
-  - David A Golden <dagolden@cpan.org>
+  - 'David A Golden <dagolden@cpan.org>'
 abstract: |-
   A general-purpose sensitivity analysis tool for 
   user-supplied calculations and parameters
@@ -16,8 +16,8 @@ requires:
 provides:
   Simulation::Sensitivity:
     file: lib/Simulation/Sensitivity.pm
-    version: 0.10
-generated_by: Module::Build version 0.28
+    version: 0.11
+generated_by: Module::Build version 0.2804
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
   version: 1.2

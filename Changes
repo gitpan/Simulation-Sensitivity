@@ -1,5 +1,8 @@
 Revision history for Perl module Simulation::Sensitivity
 
+0.11 Fri Jul 21 06:47:18 EDT 2006
+    - added pod/coverage tests
+
 0.10 Fri May 12 07:46:52 EDT 2006
     - initial release for CPAN10K challenge
 
