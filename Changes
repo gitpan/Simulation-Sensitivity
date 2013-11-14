@@ -1,5 +1,13 @@
 Revision history for Perl module Simulation::Sensitivity
 
+0.12      2013-11-13 20:24:46 America/New_York
+
+    - fixed test failures under hash randomization
+
+    - modernized distribution metadata
+
+    - converted release process to Dist::Zilla 
+
 0.11 Fri Jul 21 06:47:18 EDT 2006
     - added pod/coverage tests
 
@@ -7,4 +15,4 @@ Revision history for Perl module Simulation::Sensitivity
     - initial release for CPAN10K challenge
 
 0.01 Sat Dec 11 01:45:14 2004
-	- original version; created by ExtUtils::ModuleMaker::TT
+    - original version; created by ExtUtils::ModuleMaker::TT

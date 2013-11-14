@@ -1,12 +1,11 @@
-#!/usr/bin/perl
 use strict;
-use blib;  
+use warnings;
 
-# Simulation::Sensitivity  
+# Simulation::Sensitivity
 
-use Test::More tests =>  10 ;
+use Test::More tests => 10;
 
-BEGIN { use_ok( 'Simulation::Sensitivity' ); }
+require_ok('Simulation::Sensitivity');
 
 #--------------------------------------------------------------------------#
 # define a test calculation -- simple addition
@@ -27,26 +26,26 @@ my $test_calc = sub {
 # Tests
 #--------------------------------------------------------------------------#
 
-eval { Simulation::Sensitivity->new () };
-ok( defined $@,
-    'new() dies without valid parameters'
+eval { Simulation::Sensitivity->new() };
+ok( defined $@, 'new() dies without valid parameters' );
+
+ok(
+    my $obj = Simulation::Sensitivity->new(
+        calculation => $test_calc,
+        parameters  => {
+            alpha => 1,
+            beta  => 4
+        },
+        delta => .25
+    ),
+    'creating a Simulation::Sensitivity object'
 );
 
-ok (my $obj = Simulation::Sensitivity->new(
-        calculation => $test_calc,
-        parameters => {
-            alpha => 1,
-            beta => 4
-        },
-        delta => .25),
-    'creating a Simulation::Sensitivity object');
+isa_ok( $obj, 'Simulation::Sensitivity' );
 
-isa_ok ($obj, 'Simulation::Sensitivity');
+is( $obj->base(), 5, 'comparing base case to expected' );
 
-is ( $obj->base(), 5, 'comparing base case to expected' );
-
-ok (my $results = $obj->run(),
-    'running sensitivity analysis');
+ok( my $results = $obj->run(), 'running sensitivity analysis' );
 
 my $expected = {
     alpha => {
@@ -59,7 +58,7 @@ my $expected = {
     }
 };
 
-is_deeply($results, $expected, 'comparing expected results' );
+is_deeply( $results, $expected, 'comparing expected results' );
 
 #--------------------------------------------------------------------------#
 # Test reporting
@@ -72,19 +71,18 @@ my $report = <<TXT;
         beta    +20.00%    -20.00%
 TXT
 
-is ($obj->text_report($results), $report, 'comparing expected text report');
+is( $obj->text_report($results), $report, 'comparing expected text report' );
 
 my $bad_base_obj = Simulation::Sensitivity->new(
     calculation => $test_calc,
-    parameters => {
+    parameters  => {
         alpha => 0,
-        beta => 0
+        beta  => 0
     },
-    delta => .25);
-
-is ($bad_base_obj->base, 0, 'setting up a simulation with base case of 0');
-eval {$bad_base_obj->text_report};
-ok( defined $@,
-    'text_report dies with base case of 0'
+    delta => .25
 );
+
+is( $bad_base_obj->base, 0, 'setting up a simulation with base case of 0' );
+eval { $bad_base_obj->text_report };
+ok( defined $@, 'text_report dies with base case of 0' );
 

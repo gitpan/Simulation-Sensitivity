@@ -1,7 +1,8 @@
 package Simulation::Sensitivity;
 use strict;
-use vars qw ($VERSION);
-$VERSION = "0.11";
+use warnings;
+# ABSTRACT: A general-purpose sensitivity analysis tool for user-supplied calculations and parameters
+our $VERSION = '0.12'; # VERSION
 
 # Required modules
 use Carp;
@@ -14,10 +15,113 @@ use base qw( Class::Accessor::Fast );
 # main pod documentation #####
 #--------------------------------------------------------------------------#
 
+
+#--------------------------------------------------------------------------#
+# new()
+#--------------------------------------------------------------------------#
+
+
+{
+    my $param_spec = {
+        calculation => { type => CODEREF },
+        parameters  => { type => HASHREF },
+        delta       => { type => SCALAR }
+    };
+
+    __PACKAGE__->mk_accessors( keys %$param_spec );
+
+    sub new {
+        my $class  = shift;
+        my %params = validate( @_, $param_spec );
+        my $self   = bless( {%params}, $class );
+        return $self;
+    }
+
+}
+
+
+#--------------------------------------------------------------------------#
+# base()
+#--------------------------------------------------------------------------#
+
+
+sub base {
+    my ($self) = @_;
+    return $self->calculation->( { %{ $self->parameters } } );
+}
+
+#--------------------------------------------------------------------------#
+# run()
+#--------------------------------------------------------------------------#
+
+
+sub run {
+    my ($self) = @_;
+    my $results;
+
+    for my $key ( keys %{ $self->parameters } ) {
+        $results->{$key} = {};
+        for my $mult ( 1, -1 ) {
+            my $p = { %{ $self->parameters } };
+            $p->{$key} = ( 1 + $mult * $self->delta ) * $self->parameters->{$key};
+            $results->{$key}->{ $self->_case($mult) } =
+              $self->calculation->($p);
+        }
+    }
+    return $results;
+}
+
+#--------------------------------------------------------------------------#
+# _case ($mult, $result, $base)
+#
+# private helper function to turn a +/-1 into a case label using the delta
+#--------------------------------------------------------------------------#
+
+sub _case {
+    my ( $self, $mult ) = @_;
+    return ( ( $mult == 1 ) ? "+" : "-" ) . ( $self->delta * 100 ) . "%";
+}
+
+#--------------------------------------------------------------------------#
+# text_report()
+#--------------------------------------------------------------------------#
+
+
+sub text_report {
+    my ( $self, $results ) = @_;
+    my $base = $self->base;
+    croak "Simulation base case is zero/undefined.  Cannot generate report."
+      unless $base;
+    my $report =
+      sprintf( "%12s %9s %9s\n", "Parameter", $self->_case(1), $self->_case(-1) );
+    $report .= sprintf( "-" x 36 . "\n" );
+    for my $param ( sort keys %$results ) {
+        my $cases = $results->{$param};
+        $report .= sprintf(
+            "%12s %+9.2f%% %+9.2f%%\n",
+            $param,
+            ( $cases->{ $self->_case(1) } / $base - 1 ) * 100,
+            ( $cases->{ $self->_case(-1) } / $base - 1 ) * 100,
+        );
+    }
+    return $report;
+}
+
+1;
+
+__END__
+
+=pod
+
+=encoding UTF-8
+
 =head1 NAME
 
-Simulation::Sensitivity - A general-purpose sensitivity analysis tool for 
-user-supplied calculations and parameters
+Simulation::Sensitivity - A general-purpose sensitivity analysis tool for user-supplied calculations and parameters
+
+=head1 VERSION
+
+version 0.12
 
 =head1 SYNOPSIS
 
@@ -46,12 +150,6 @@ in the calculation.  It must return a single, numerical result.
 
 =head1 CONSTRUCTORS
 
-=cut
-
-#--------------------------------------------------------------------------#
-# new()
-#--------------------------------------------------------------------------#
-
 =head2 C<new> 
 
  my $sim = Simulation::Sensitivity->new(
@@ -64,30 +162,10 @@ C<calculation> must be a reference to a subroutine and is used for
 calculation.  It must adhere to the usage guidelines above for such 
 functions.  C<parameters> must be a reference to a hash that represents
 the initial starting parameters for the calculation.  C<delta> is a
-percentage that each parameter will be pertubed by during the analysis.  
+percentage that each parameter will be perturbed by during the analysis.  
 Percentages should be expressed as a decimal (0.1 to indicate 10%).  
 
 As a constructor, C<new> returns a Simulation::Sensitivity object.
-
-=cut
-
-{
-    my $param_spec = {
-        calculation => { type => CODEREF },
-        parameters => { type => HASHREF },
-        delta => { type => SCALAR }
-    };
-
-    __PACKAGE__->mk_accessors( keys %$param_spec );
-
-    sub new {
-        my $class = shift;
-        my %params = validate( @_, $param_spec );
-        my $self = bless ({%params}, $class);
-        return $self;
-    }
-
-}
 
 =head1 PROPERTIES
 
@@ -98,16 +176,9 @@ As a constructor, C<new> returns a Simulation::Sensitivity object.
  $new_delta = $sim->delta(.15);
 
 The parameter values in a Simulation::Sensitivity object may be 
-retreived or modified using get/set accessors.  With no argument, the 
+retrieved or modified using get/set accessors.  With no argument, the 
 accessor returns the value of the parameter.  With an argument, the
 accessor sets the value to the new value and returns the new value.
-
-=cut 
-
-
-#--------------------------------------------------------------------------#
-# base()
-#--------------------------------------------------------------------------#
 
 =head1 METHODS
 
@@ -117,17 +188,6 @@ accessor sets the value to the new value and returns the new value.
 
 This method returns the base-case result for the parameter values provided
 in the constructor.
- 
-=cut
-
-sub base {
-	my ($self) = @_;
-    return $self->calculation->( { %{$self->parameters }} );	
-}
-
-#--------------------------------------------------------------------------#
-# run()
-#--------------------------------------------------------------------------#
 
 =head2 C<run>
 
@@ -151,42 +211,6 @@ example would be:
      }
  }
 
-
-=cut
-
-sub run {
-	my ($self) = @_;
-    my $results;
-    
-    for my $key ( keys %{$self->parameters} ) {
-        $results->{$key} = {};
-        for my $mult ( 1, -1 ) {
-            my $p = { %{$self->parameters} };
-            $p->{$key} = (1 + $mult * $self->delta ) * 
-                         $self->parameters->{$key};
-            $results->{$key}->{$self->_case($mult)} = 
-                $self->calculation->($p);
-        }
-    }
-    return $results;
-}
-
-#--------------------------------------------------------------------------#
-# _case ($mult, $result, $base) 
-#
-# private helper function to turn a +/-1 into a case label using the delta
-#--------------------------------------------------------------------------#
-
-sub _case {
-    my ($self, $mult) = @_;
-    return (($mult == 1) ? "+" : "-") . ($self->delta * 100) . "%";
-}
-
-
-#--------------------------------------------------------------------------#
-# text_report()
-#--------------------------------------------------------------------------#
-
 =head2 C<text_report>
 
  $report = text_report( $results );
@@ -195,82 +219,35 @@ This method generates a text string containing a simple, multi-line report.
 The only parameter is a hash reference containing a set of results produced
 with C<run>.
 
-=cut
+=for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
 
-sub text_report {
-	my ($self, $results) = @_;
-	my $base = $self->base;
-    croak "Simulation base case is zero/undefined.  Cannot generate report." 
-        unless $base;
-    my $report = sprintf("%12s %9s %9s\n",
-        "Parameter",
-        $self->_case(1),
-        $self->_case(-1)
-    );
-    $report .= sprintf( "-" x 36 . "\n");
-    for my $param (keys %$results) {
-        my $cases = $results->{$param};
-        $report .= sprintf("%12s %+9.2f%% %+9.2f%%\n",
-            $param, 
-            ($cases->{$self->_case(1)}/$base -1 ) * 100, 
-            ($cases->{$self->_case(-1)}/$base -1 ) * 100,
-        );
-    }
-    return $report; 
-}
+=head1 SUPPORT
 
-1; #this line is important and will help the module return a true value
-__END__
+=head2 Bugs / Feature Requests
 
-=head1 BUGS
+Please report any bugs or feature requests through the issue tracker
+at L<https://github.com/dagolden/Simulation-Sensitivity/issues>.
+You will be notified automatically of any progress on your issue.
 
-Please report any bugs or feature using the CPAN Request Tracker.  
-Bugs can be submitted by email to C<bug-Simulation-Sensitivity@rt.cpan.org> or 
-through the web interface at 
-L<http://rt.cpan.org/Public/Dist/Display.html?Name=Simulation-Sensitivity>
+=head2 Source Code
 
-When submitting a bug or request, please include a test-file or a patch to an
-existing test-file that illustrates the bug or desired feature.
+This is open source software.  The code repository is available for
+public review and contribution under the terms of the license.
+
+L<https://github.com/dagolden/Simulation-Sensitivity>
+
+  git clone https://github.com/dagolden/Simulation-Sensitivity.git
 
 =head1 AUTHOR
 
-David A Golden (DAGOLDEN)
+David Golden <dagolden@cpan.org>
 
-dagolden@cpan.org
+=head1 COPYRIGHT AND LICENSE
 
-L<http://dagolden.com/>
+This software is Copyright (c) 2013 by David Golden.
 
-=head1 COPYRIGHT
+This is free software, licensed under:
 
-Copyright (c) 2006 by David A Golden
-
-This program is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
-
-The full text of the license can be found in the
-LICENSE file included with this module.
-
-=head1 DISCLAIMER OF WARRANTY
-
-BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
-FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
-OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
-PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
-EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
-ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
-YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
-NECESSARY SERVICING, REPAIR, OR CORRECTION.
-
-IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
-WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
-REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
-LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
-OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
-THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
-RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
-FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
-SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
-SUCH DAMAGES.
+  The Apache License, Version 2.0, January 2004
 
 =cut
